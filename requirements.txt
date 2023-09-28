@@ -19,3 +19,7 @@ langcorn
 openai
 langchain
 pandas
+python-dotenv
+google-cloud-bigquery
+pybigquery
+pyarrow
