@@ -24,3 +24,4 @@ google-cloud-bigquery
 pybigquery
 pyarrow
 google-cloud-bigquery-storage
+networkx

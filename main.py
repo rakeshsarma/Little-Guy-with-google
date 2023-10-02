@@ -5,9 +5,12 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import *
 
 
+
 import os
 import json
 
+from langchain.memory.buffer_window import ConversationBufferWindowMemory
+from langchain.memory import ConversationSummaryMemory, ChatMessageHistory, ConversationKGMemory,CombinedMemory
 from langchain.agents import create_sql_agent
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.sql_database import SQLDatabase
@@ -43,20 +46,58 @@ sqlalchemy_url = f'bigquery://{project}/{dataset}?credentials_path={service_acco
 
 print (sqlalchemy_url)
 
+llm_context = ChatOpenAI(temperature=0, model_name="gpt-4")
+llm_code = ChatOpenAI(temperature=0, model_name="gpt-4")
+'''
+chat_history_buffer = ConversationBufferWindowMemory(
+    k=5,
+    memory_key="chat_history_buffer",
+    input_key="input"
+    )
+   
+chat_history_summary = ConversationSummaryMemory(
+    llm=llm_context, 
+    memory_key="chat_history_summary",
+    input_key="input"
+    )
+
+chat_history_KG = ConversationKGMemory(
+    llm=llm_context, 
+    memory_key="chat_history_KG",
+    input_key="input",
+    input_variables = ["input", "agent_scratchpad"]
+    )
+
+memory = CombinedMemory(memories=[chat_history_buffer, chat_history_summary, chat_history_KG])
+'''
+
+
 
 db = SQLDatabase.from_uri(sqlalchemy_url, include_tables=["event_level_data"])
 
-#llm = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-16k")
-llm = ChatOpenAI(temperature=0, model_name="gpt-4")
 
-toolkit = SQLDatabaseToolkit(db=db, llm=llm)
+
+toolkit = SQLDatabaseToolkit(db=db, llm=llm_code)
 
 agent_executor = create_sql_agent(
-	llm=llm,
+	llm=llm_code,
 	toolkit=toolkit,
 	verbose=True,
-	top_k=10,
+	top_k=100 
 	)
+#agent 2 with memory
+'''
+agent_executor = create_sql_agent(
+	llm=llm_code,
+	toolkit=toolkit,
+	verbose=True,
+	top_k=100,
+    agent_executor_kwargs={"memory": memory},
+    input_variables = ['input', 'agent_scratchpad','chat_history_KG','chat_history_summary','chat_history_buffer']
+    
+	)
+
+'''
 
 #agent_executor.run("give me the percentage distribution of revenue by channel for yesterday. if there's in none take it as 0. Use IOUX_PARAMS_EVENT_SESSION ")
 #agent_executor.run("list down all the channels in the dataset?")
@@ -76,5 +117,16 @@ agent_executor = create_sql_agent(
 
 #agent_executor.run("which channel performed better this week and why?")
 #agent_executor.run("what are the top 3 channels and what is their contibution by percent to the revenue?")
-agent_executor.run("Can you show me the trends of psuedo users day by day")
+#answer = agent_executor.run("Can you show me the trends of psuedo users day by day. Are they increasing or decreasing?")
+#agent_executor.run("Hi")
+#answer = agent_executor.run("A day is called a good day if the no of psudo users acquired in a day is greater than the mean users in that week. How many good days did we have last week? Mention the dates")
+#answer = agent_executor.run("which are the top 10 cities by revenue")
+#answer = agent_executor.run("what are the 3 top channels of revenue for top 3 cities by revenue?")
 
+#answer = agent_executor.run("give me top 10 three event sequences which leads to highest revenue ")
+#answer = agent_executor.run("give me top 10 three event sequences which leads to highest revenue for users coming from  channels")
+answer = agent_executor.run("Event sequences are set of 3 consecutive events orderd by date time. give me top 10 'three event sequences' which leads to highest revenue for users coming from Online Stamp Paper channel")
+#answer = agent_executor.run("give me top 10 'three event sequences' which leads to highest revenue for users coming from Online Stamp Paper channel")
+
+
+#print(answer)
