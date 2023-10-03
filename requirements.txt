@@ -25,3 +25,5 @@ pybigquery
 pyarrow
 google-cloud-bigquery-storage
 networkx
+python-jose[cryptography]
+passlib[bcrypt]

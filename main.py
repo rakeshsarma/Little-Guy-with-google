@@ -5,7 +5,6 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import *
 
 
-
 import os
 import json
 
@@ -22,7 +21,9 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import *
 
 from pybigquery.api import ApiClient
+from fastapi import FastAPI
 
+app = FastAPI()
 
 
 #loading the environment
@@ -125,8 +126,17 @@ agent_executor = create_sql_agent(
 
 #answer = agent_executor.run("give me top 10 three event sequences which leads to highest revenue ")
 #answer = agent_executor.run("give me top 10 three event sequences which leads to highest revenue for users coming from  channels")
-answer = agent_executor.run("Event sequences are set of 3 consecutive events orderd by date time. give me top 10 'three event sequences' which leads to highest revenue for users coming from Online Stamp Paper channel")
+#answer = agent_executor.run("Event sequences are set of 3 consecutive events orderd by date time. give me top 10 'three event sequences' which leads to highest revenue for users coming from Online Stamp Paper channel")
 #answer = agent_executor.run("give me top 10 'three event sequences' which leads to highest revenue for users coming from Online Stamp Paper channel")
 
+#answer = agent_executor.run("Give me the payment funnel for any user using this app. Only consider users who have purchased to make this funnel")
 
 #print(answer)
+
+
+@app.get("/ask")
+def answer (question :str):
+    answer = agent_executor.run(question)
+    return answer
+
+
