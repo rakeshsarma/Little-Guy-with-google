@@ -29,3 +29,6 @@ python-jose[cryptography]
 passlib[bcrypt]
 typing
 cloud-sql-python-connector
+pymysql
+python-multipart
+requests

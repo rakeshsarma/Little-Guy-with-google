@@ -1,7 +1,7 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
 from google.cloud.sql.connector import Connector
 
-db_password = acces_secret_version()
+#db_password = acces_secret_version()
 connector = Connector()
 def getconn():
     conn=connector.connect(
@@ -17,3 +17,6 @@ engine = create_engine(
     "mysql+pymysql://",
     creator = getconn
 )
+
+meta = MetaData()
+conn = engine.connect()

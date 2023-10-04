@@ -1,5 +1,2 @@
 runtime: python39
-entrypoint: gunicorn -k uvicorn.workers.UvicornWorker main:app
-
-env_variables:
-    OPENAI_API_KEY : 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
+entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app
