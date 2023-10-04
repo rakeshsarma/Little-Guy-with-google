@@ -27,3 +27,5 @@ google-cloud-bigquery-storage
 networkx
 python-jose[cryptography]
 passlib[bcrypt]
+typing
+cloud-sql-python-connector

@@ -20,10 +20,28 @@ from sqlalchemy import *
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import *
 
+
+from typing import Annotated
 from pybigquery.api import ApiClient
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+from pydantic import BaseModel
+
+
+
 
 app = FastAPI()
+
+oauth2schema = OAuth2PasswordBearer(tokenUrl = 'token')
+
+@app.post("/token")
+async def token(somecode_from_bubble :str):
+    return {'access_token': somecode_from_bubble + 'token'}
+
+    pass
+
+
 
 
 #loading the environment
@@ -42,13 +60,24 @@ table = "event_level_data"
 #dataset = "analytics_254245242"
 #table = "events_*"
 
+class Data(BaseModel):
+    question:str
+
 
 sqlalchemy_url = f'bigquery://{project}/{dataset}?credentials_path={service_account_file}'
 
 print (sqlalchemy_url)
 
+'''
 llm_context = ChatOpenAI(temperature=0, model_name="gpt-4")
 llm_code = ChatOpenAI(temperature=0, model_name="gpt-4")
+'''
+
+#using GPT 3.5 turbo for validation
+llm_context = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-16k")
+llm_code = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-16k")
+
+
 '''
 chat_history_buffer = ConversationBufferWindowMemory(
     k=5,
@@ -117,7 +146,7 @@ agent_executor = create_sql_agent(
 #agent_executor.run("How many active psuedo users do we have in this month? Query event_level_data table")
 
 #agent_executor.run("which channel performed better this week and why?")
-#agent_executor.run("what are the top 3 channels and what is their contibution by percent to the revenue?")
+agent_executor.run("what are the top 3 channels and what is their contibution by percent to the revenue?")
 #answer = agent_executor.run("Can you show me the trends of psuedo users day by day. Are they increasing or decreasing?")
 #agent_executor.run("Hi")
 #answer = agent_executor.run("A day is called a good day if the no of psudo users acquired in a day is greater than the mean users in that week. How many good days did we have last week? Mention the dates")
