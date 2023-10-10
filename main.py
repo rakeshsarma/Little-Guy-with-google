@@ -7,7 +7,7 @@ from sqlalchemy import *
 from sqlalchemy.engine import create_engine
 from sqlalchemy.schema import *
 
-
+from config import gadb
 
 
 import os
@@ -81,13 +81,6 @@ oauth_2_scheme = OAuth2PasswordBearer(tokenUrl = "token")
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials = True,
-    allow_methods = ["*"],
-    allow_headers=["*"]
-)
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -118,17 +111,18 @@ def create_access_token(data : dict, expires_delta : timedelta or None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def authenticateBubbleUser(bubbleUsername, bubblePassword, version):
+def authenticateBubbleUser(bubbleToken, version):
     prod_url = "https://qseo.quantacus.ai/api/1.1/wf/googleAuthenticator"
     test_url = "https://qseo.quantacus.ai/version-test/api/1.1/wf/googleAuthenticator"
-    payload = {"username": bubbleUsername, "password":bubblePassword}
-    
+    payload = {"bubbleToken": bubbleToken}
+    headers = {"Authorization":"Bearer 477b077de6945fcd9e1999fa317f14f0"}
+
     if(version =="prod"):
-        response = requests.get(prod_url, params=payload)
+        response = requests.get(prod_url, headers=headers, params=payload)
     else:
-        response = requests.get(test_url, params=payload)
+        response = requests.get(test_url, headers=headers, params=payload)
     
-    print(response)
+    #print(str(response))
 
     return response
 
@@ -171,9 +165,11 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 service_account_file = "service-account-key.json" # Change to where your service account key file is located
 
 project = "ga4-bq-connector"
-dataset = "test_dataset_id"
+#dataset = "test_dataset_id"
+dataset = "GoogleAdsDataset"
 #table = "EVENTS_UNION"
-table = "event_level_data"
+#table = "event_level_data"
+
 
 #dataset = "analytics_254245242"
 #table = "events_*"
@@ -188,12 +184,13 @@ print (sqlalchemy_url)
 
 
 #llm_context = ChatOpenAI(temperature=0, model_name="gpt-4")
-#llm_code = ChatOpenAI(temperature=0, model_name="gpt-4")
+llm_code = ChatOpenAI(temperature=0, model_name="gpt-4")
 
 
 #using GPT 3.5 turbo for validation
-llm_context = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-16k")
-llm_code = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-16k")
+#llm_context = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-16k")
+#llm_code = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo-16k")
+#llm_code_finetuned = ChatOpenAI(temperature=0, model_name="my-model")
 
 
 
@@ -223,7 +220,8 @@ memory = CombinedMemory(memories=[chat_history_buffer, chat_history_summary, cha
 
 
 
-database = SQLDatabase.from_uri(sqlalchemy_url, include_tables=["event_level_data"])
+#database = SQLDatabase.from_uri(sqlalchemy_url, include_tables=["event_level_data"])
+database = SQLDatabase.from_uri(sqlalchemy_url)
 
 
 
@@ -283,6 +281,10 @@ agent_executor = create_sql_agent(
 
 #print(answer)
 
+#checking on Google Ads data
+
+agent_executor.run("How much cost did we incur yesterday?")
+
 
 @app.get("/ask")
 def answer (question :str):
@@ -291,22 +293,38 @@ def answer (question :str):
 
 
 @app.get("/ask/auth")
-def answer2 (question :str, current_user: User = Depends(get_current_active_user)):
-    answer = agent_executor.run(question)
-    return answer
+def answer_after_auth (question :str, current_user_bearer_token):
+    is_user_presnt = gadb.select_user(current_user_bearer_token)
+    if is_user_presnt:
+        answer = agent_executor.run(question)
+        return answer
+    else:
+        return "cannot serve request"
+        
 
 
 
 
 
 @app.get("/bubble/auth")
-def  answer3 (bubbleUsername :str, bubblePassword: str, version: str):
-    print (bubbleUsername)
-    print (bubblePassword)
-    print (version)
-    response = authenticateBubbleUser(bubbleUsername, bubblePassword, version)
-    return response
+def  authetication(bubbleToken :str, version: str):
+    response = authenticateBubbleUser(bubbleToken, version)
+    #print(response);
+    data = response.json()
+    print(data["response"]["result"])
+    print(jwt.encode({"sub":bubbleToken}, SECRET_KEY, algorithm=ALGORITHM))
     
+    if(data["response"]["result"] == "success"):  #change this to "success"
+        
+        bearer_token = jwt.encode({"sub":bubbleToken}, SECRET_KEY, algorithm=ALGORITHM)
+        #gadb.insert_user("bubbleToken","bearer_token")
+        gadb.insert_user(BBcode = bubbleToken, GCPcode =bearer_token)
+        #print (bearer_token)
+        return {"bearer_token":bearer_token}
+    else:
+        return  {"response":"ERROR: 401: Unauthorized User."}
+
 #pwd = get_password_hash("12345")    
 #print(pwd)
 
+#authetication("abzseW48V5AEGa43boeXqYow==c", "test")

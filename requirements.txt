@@ -32,3 +32,5 @@ cloud-sql-python-connector
 pymysql
 python-multipart
 requests
+cloud-sql-python-connector[pymysql] 
+SQLAlchemy
