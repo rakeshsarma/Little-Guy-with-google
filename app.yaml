@@ -1,2 +1,2 @@
 runtime: python39
-entrypoint: gunicorn -k uvicorn.workers.UvicornWorker main:app
+entrypoint: gunicorn -k uvicorn.workers.UvicornWorker main:app--timeout 0

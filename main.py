@@ -166,7 +166,9 @@ service_account_file = "service-account-key.json" # Change to where your service
 
 project = "ga4-bq-connector"
 #dataset = "test_dataset_id"
-dataset = "GoogleAdsDataset"
+#dataset = "GoogleAdsDataset"
+dataset = "GoogleAdsRefreshed"
+#dataset = "GoogleAdsStatsDataset"
 #table = "EVENTS_UNION"
 #table = "event_level_data"
 
@@ -180,11 +182,17 @@ sqlalchemy_url = f'bigquery://{project}/{dataset}?credentials_path={service_acco
 
 
 print (sqlalchemy_url)
-
-
-
-#llm_context = ChatOpenAI(temperature=0, model_name="gpt-4")
+#gpt_4 = "gpt-4"
+gpt_4_32k = "gpt-4-32k"
+gpt_turbo_16k = "gpt-3.5-turbo-16k-0613"
+gpt_turbo = "gpt-3.5-turbo-0613"
+ft_model_name = "ft:gpt-3.5-turbo-0613:quantacus::8AvoTxOF"
+#llm_code = ChatOpenAI(temperature=0, model_name=gpt_turbo_16k)
 llm_code = ChatOpenAI(temperature=0, model_name="gpt-4")
+
+
+#llm_code = ChatOpenAI(temperature=0, model_name="gpt-4-32k")
+
 
 
 #using GPT 3.5 turbo for validation
@@ -221,6 +229,7 @@ memory = CombinedMemory(memories=[chat_history_buffer, chat_history_summary, cha
 
 
 #database = SQLDatabase.from_uri(sqlalchemy_url, include_tables=["event_level_data"])
+#database = SQLDatabase.from_uri(sqlalchemy_url, include_tables=["p_ads_CampaignBasicStats_9528139001"])
 database = SQLDatabase.from_uri(sqlalchemy_url)
 
 
@@ -231,7 +240,8 @@ agent_executor = create_sql_agent(
 	llm=llm_code,
 	toolkit=toolkit,
 	verbose=True,
-	top_k=100 
+	top_k=1000,
+    handle_parsing_errors=True
 	)
 #agent 2 with memory
 
@@ -283,7 +293,8 @@ agent_executor = create_sql_agent(
 
 #checking on Google Ads data
 
-agent_executor.run("How much cost did we incur yesterday?")
+#agent_executor.run(" Show the trend for campaign wise daily sum(clicks)/sum(impressions) as CTR for the last 2 weeks.")
+#agent_executor.run("How many distinct campaigns did we start after 09th October? ")
 
 
 @app.get("/ask")
@@ -296,10 +307,15 @@ def answer (question :str):
 def answer_after_auth (question :str, current_user_bearer_token):
     is_user_presnt = gadb.select_user(current_user_bearer_token)
     if is_user_presnt:
-        answer = agent_executor.run(question)
-        return answer
+        try:
+            answer = agent_executor.run(question)
+            print(answer)
+            return answer
+        except Exception as error:    
+            print("An exception occurred:", error)
+            return ("An exception occurred:", error)
     else:
-        return "cannot serve request"
+        return "cannot serve request from backend"
         
 
 
